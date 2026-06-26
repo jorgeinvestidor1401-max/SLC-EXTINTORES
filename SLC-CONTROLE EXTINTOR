@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Extintores - SLC Agrícola</title>
+    
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1b4d3e">
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/786/786311.png">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { background-color: #f0f7f4; }
+        .bg-slc-green { background-color: #1b4d3e; }
+        .text-slc-green { color: #1b4d3e; }
+        @keyframes pulse-red {
+            0%, 100% { background-color: #fee2e2; color: #991b1b; }
+            50% { background-color: #fca5a5; color: #7f1d1d; }
+        }
+        .alert-critical {
+            animation: pulse-red 2s infinite;
+        }
+        /* Customização elegante para a barra de rolagem interna */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
+</head>
+<body class="font-sans text-gray-800 min-h-screen pb-12">
+
+    <!-- Cabeçalho -->
+    <header class="bg-slc-green text-white shadow-md py-6 px-4 mb-6">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-fire-extinguisher text-3xl text-green-400"></i>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-wide">SLC AGRÍCOLA</h1>
+                    <p class="text-xs text-green-200 uppercase tracking-widest font-semibold">Sistema de Gestão de Extintores</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p id="current-date" class="text-sm font-medium opacity-90"></p>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- COLUNA 1: Cadastros -->
+        <div class="space-y-6">
+            <!-- Formulário de Cadastro de Extintor -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h2 id="form-title" class="text-lg font-bold mb-4 text-slc-green flex items-center gap-2">
+                    <i class="fa-solid fa-plus-circle"></i> Cadastrar Extintor
+                </h2>
+                <form id="extinguisher-form" class="space-y-4">
+                    <input type="hidden" id="edit-id" value="">
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase mb-1 text-gray-500">Tipo de Extintor</label>
+                        <select id="type" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-600 outline-none" required>
+                            <option value="Água (H20)">Água (H20)</option>
+                            <option value="Gás Carbônico (CO2)">Gás Carbônico (CO2)</option>
+                            <option value="Pó Químico B/C">Pó Químico B/C</option>
+                            <option value="Pó Químico A/B/C">Pó Químico A/B/C</option>
+                            <option value="Espuma Mecânica">Espuma Mecânica</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-xs font-bold uppercase mb-1 text-gray-500">Capacidade</label>
+                        <select id="capacity" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-600 outline-none" required>
+                            <option value="2 Kg">2 Kg</option>
+                            <option value="4 Kg">4 Kg</option>
+                            <option value="6 Kg">6 Kg</option>
+                            <option value="8 Kg">8 Kg</option>
+                            <option value="9 Kg">9 Kg</option>
+                            <option value="12 Kg">12 Kg</option>
+                            <option value="50 Kg (Carreta)">50 Kg (Carreta)</option>
+                            <option value="10 Litros">10 Litros</option>
+                            <option value="50 Litros (Carreta)">50 Litros (Carreta)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase mb-1 text-gray-500">Local / Setor da Fazenda</label>
+                        <input type="text" id="location" placeholder="Ex: Barracão de Máquinas, Sede" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-600 outline-none" required>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase mb-1 text-gray-500">Vencimento</label>
+                            <input type="date" id="expiry-date" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-600 outline-none" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase mb-1 text-gray-500">Qtd Estoque</label>
+                            <input type="number" id="quantity" min="1" value="1" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-600 outline-none" required>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="button" id="cancel-edit-btn" onclick="resetForm()" class="hidden w-1/3 bg-gray-300 hover:bg-gray-400 text-gray-700 font-bold py-2.5 rounded-lg text-sm transition">
+                            Cancelar
+                        </button>
+                        <button type="submit" id="submit-btn" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-2.5 rounded-lg text-sm transition shadow-md">
+                            Adicionar Extintor
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Formulário de Lista de Telefones para Alerta -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h2 class="text-lg font-bold mb-3 text-slc-green flex items-center gap-2">
+                    <i class="fa-solid fa-address-book"></i> Telefones para Alerta
+                </h2>
+                <form id="phone-form" class="flex gap-2 mb-4">
+                    <input type="text" id="contact-name" placeholder="Nome" class="w-1/2 border border-gray-300 rounded-lg p-2 text-xs outline-none" required>
+                    <input type="tel" id="contact-phone" placeholder="DDD + Número" class="w-1/2 border border-gray-300 rounded-lg p-2 text-xs outline-none" required>
+                    <button type="submit" class="bg-emerald-600 text-white px-3 rounded-lg text-xs font-bold"><i class="fa-solid fa-user-plus"></i></button>
+                </form>
+                <div id="phone-list" class="space-y-2 max-h-32 overflow-y-auto text-xs custom-scrollbar">
+                    <!-- Gerado dinamicamente -->
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUNAS 2 e 3: Listagem e Painel -->
+        <div class="lg:col-span-2 space-y-6">
+            
+            <!-- Painel de Totais Únicos por Tipo -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-blue-500">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase">Água (H20)</p>
+                    <p id="total-agua" class="text-xl font-black text-gray-800">0</p>
+                </div>
+                <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-red-500">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase">Gás Carbônico (CO2)</p>
+                    <p id="total-co2" class="text-xl font-black text-gray-800">0</p>
+                </div>
+                <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-amber-600">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase">Pó Químico B/C</p>
+                    <p id="total-bc" class="text-xl font-black text-gray-800">0</p>
+                </div>
+                <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-yellow-500">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase">Pó Químico A/B/C</p>
+                    <p id="total-abc" class="text-xl font-black text-gray-800">0</p>
+                </div>
+                <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-purple-500">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase">Espuma Mecânica</p>
+                    <p id="total-espuma" class="text-xl font-black text-gray-800">0</p>
+                </div>
+            </div>
+
+            <!-- Tabela de Controle -->
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 flex flex-col">
+                <div class="p-4 bg-gray-50 border-b border-gray-200 flex flex-col gap-4 shrink-0">
+                    
+                    <!-- Topo da Tabela (Título e Ações) -->
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-3">
+                        <div>
+                            <h3 class="font-bold text-gray-700 flex items-center gap-2">
+                                <i class="fa-solid fa-list-check text-emerald-600"></i> Inventário Ativo
+                            </h3>
+                        </div>
+                        <div class="flex gap-2 w-full sm:w-auto">
+                            <button onclick="sendBulkWarning()" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2 px-3 rounded-lg flex items-center gap-2 transition shadow-sm w-full sm:w-auto justify-center">
+                                <i class="fa-solid fa-bell"></i> Alerta Geral (-30 dias)
+                            </button>
+                            <button onclick="exportToExcel()" class="bg-green-700 hover:bg-green-800 text-white text-xs font-bold py-2 px-3 rounded-lg flex items-center gap-2 transition shadow-sm w-full sm:w-auto justify-center">
+                                <i class="fa-solid fa-file-excel"></i> Excel
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- NOVA SEÇÃO: Filtros por Status -->
+                    <div class="flex flex-wrap gap-2 items-center border-t border-gray-100 pt-3">
+                        <span class="text-xs font-bold text-gray-500 mr-1 uppercase tracking-wider text-[10px]">Filtrar por Status:</span>
+                        <button onclick="setFilter('all')" id="btn-filter-all" class="px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-xs border bg-emerald-700 text-white border-emerald-700">
+                            Todos
+                        </button>
+                        <button onclick="setFilter('expired')" id="btn-filter-expired" class="px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-xs border bg-white text-red-600 border-red-200 hover:bg-red-50">
+                            🚨 Vencidos / Críticos
+                        </button>
+                        <button onclick="setFilter('warning')" id="btn-filter-warning" class="px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-xs border bg-white text-amber-600 border-amber-200 hover:bg-amber-50">
+                            ⚠️ Atenção (31-60d)
+                        </button>
+                        <button onclick="setFilter('regular')" id="btn-filter-regular" class="px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-xs border bg-white text-green-700 border-green-200 hover:bg-green-50">
+                            ✅ Regular
+                        </button>
+                    </div>
+
+                </div>
+                
+                <!-- Área de rolagem -->
+                <div class="overflow-x-auto overflow-y-auto max-h-[480px] custom-scrollbar">
+                    <table class="w-full text-left border-collapse min-w-[600px]">
+                        <thead class="sticky top-0 bg-gray-100 z-10 shadow-[0_1px_0_0_rgba(0,0,0,0.1)]">
+                            <tr class="text-gray-600 text-[11px] uppercase font-bold">
+                                <th class="p-3">Tipo</th>
+                                <th class="p-3">Capacidade</th>
+                                <th class="p-3">Localização</th>
+                                <th class="p-3">Qtd</th>
+                                <th class="p-3">Vencimento</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3 text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-table" class="divide-y divide-gray-100 text-xs">
+                            <!-- Inserido dinamicamente via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        let inventory = JSON.parse(localStorage.getItem('slc_extintores')) || [];
+        let contacts = JSON.parse(localStorage.getItem('slc_contatos')) || [];
+        let currentFilter = 'all'; // Define o filtro inicial
+
+        document.getElementById('current-date').innerText = new Date().toLocaleDateString('pt-BR', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+
+        document.getElementById('extinguisher-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const editId = document.getElementById('edit-id').value;
+            const itemData = {
+                type: document.getElementById('type').value,
+                capacity: document.getElementById('capacity').value,
+                location: document.getElementById('location').value,
+                expiryDate: document.getElementById('expiry-date').value,
+                quantity: parseInt(document.getElementById('quantity').value)
+            };
+
+            if (editId) {
+                inventory = inventory.map(item => item.id == editId ? { ...item, ...itemData } : item);
+            } else {
+                itemData.id = Date.now();
+                inventory.push(itemData);
+            }
+
+            saveData();
+            resetForm();
+        });
+
+        document.getElementById('phone-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const contact = {
+                id: Date.now(),
+                name: document.getElementById('contact-name').value,
+                phone: document.getElementById('contact-phone').value.replace(/\D/g, '')
+            };
+            contacts.push(contact);
+            localStorage.setItem('slc_contatos', JSON.stringify(contacts));
+            renderContacts();
+            this.reset();
+        });
+
+        function editItem(id) {
+            const item = inventory.find(i => i.id === id);
+            if (!item) return;
+
+            document.getElementById('edit-id').value = item.id;
+            document.getElementById('type').value = item.type;
+            document.getElementById('capacity').value = item.capacity;
+            document.getElementById('location').value = item.location;
+            document.getElementById('expiry-date').value = item.expiryDate;
+            document.getElementById('quantity').value = item.quantity;
+
+            document.getElementById('form-title').innerHTML = `<i class="fa-solid fa-pen-to-square text-blue-600"></i> Editar Extintor`;
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.innerText = "Salvar Alterações";
+            submitBtn.className = "w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg text-sm transition shadow-md";
+            
+            document.getElementById('cancel-edit-btn').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetForm() {
+            document.getElementById('extinguisher-form').reset();
+            document.getElementById('edit-id').value = "";
+            document.getElementById('quantity').value = 1;
+
+            document.getElementById('form-title').innerHTML = `<i class="fa-solid fa-plus-circle"></i> Cadastrar Extintor`;
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.innerText = "Adicionar Extintor";
+            submitBtn.className = "w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-2.5 rounded-lg text-sm transition shadow-md";
+            
+            document.getElementById('cancel-edit-btn').classList.add('hidden');
+        }
+
+        function saveData() {
+            localStorage.setItem('slc_extintores', JSON.stringify(inventory));
+            renderTable();
+            calculateTotals();
+        }
+
+        function deleteItem(id) {
+            if (confirm("Tem certeza que deseja excluir este extintor?")) {
+                inventory = inventory.filter(item => item.id !== id);
+                if(document.getElementById('edit-id').value == id) resetForm();
+                saveData();
+            }
+        }
+
+        function deleteContact(id) {
+            contacts = contacts.filter(c => c.id !== id);
+            localStorage.setItem('slc_contatos', JSON.stringify(contacts));
+            renderContacts();
+        }
+
+        function getDaysToExpiry(expiryDateStr) {
+            const today = new Date(); today.setHours(0,0,0,0);
+            const expiryDate = new Date(expiryDateStr); expiryDate.setHours(0,0,0,0);
+            return Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+        }
+
+        function calculateTotals() {
+            const totals = { "Água (H20)": 0, "Gás Carbônico (CO2)": 0, "Pó Químico B/C": 0, "Pó Químico A/B/C": 0, "Espuma Mecânica": 0 };
+            inventory.forEach(item => { if (totals[item.type] !== undefined) totals[item.type] += item.quantity; });
+            
+            document.getElementById('total-agua').innerText = totals["Água (H20)"];
+            document.getElementById('total-co2').innerText = totals["Gás Carbônico (CO2)"];
+            document.getElementById('total-bc').innerText = totals["Pó Químico B/C"];
+            document.getElementById('total-abc').innerText = totals["Pó Químico A/B/C"];
+            document.getElementById('total-espuma').innerText = totals["Espuma Mecânica"];
+        }
+
+        function renderContacts() {
+            const list = document.getElementById('phone-list');
+            list.innerHTML = '';
+            if(contacts.length === 0) {
+                list.innerHTML = '<p class="text-gray-400 italic">Nenhum número salvo.</p>';
+                return;
+            }
+            contacts.forEach(c => {
+                const div = document.createElement('div');
+                div.className = "flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-200";
+                div.innerHTML = `
+                    <span><strong>${c.name}</strong> (${c.phone})</span>
+                    <button onclick="deleteContact(${c.id})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function sendWhatsAppAlert(type, capacity, location, date, days) {
+            if (contacts.length === 0) {
+                alert("Por favor, cadastre ao menos um número de telefone primeiro.");
+                return;
+            }
+            let statusText = days < 0 ? `🚨 VENCIDO HÁ ${Math.abs(days)} DIAS!` : (days === 0 ? `⚠️ VENCE HOJE!` : `⏳ Vence em ${days} dias.`);
+            const message = `*SLC AGRÍCOLA - AVISO DE EXTINTOR*%0A%0A*Tipo:* ${type}%0A*Capacidade:* ${capacity}%0A*Local:* ${location}%0A*Vencimento:* ${new Date(date).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}%0A*Status:* ${statusText}`;
+            
+            window.open(`https://api.whatsapp.com/send?phone=55${contacts[0].phone}&text=${message}`, '_blank');
+        }
+
+        function sendBulkWarning() {
+            if (contacts.length === 0) return alert("Cadastre telefones antes de enviar o aviso.");
+            
+            const criticalItems = inventory.filter(item => getDaysToExpiry(item.expiryDate) <= 30);
+            
+            if (criticalItems.length === 0) {
+                alert("Não há nenhum extintor vencendo nos próximos 30 dias.");
+                return;
+            }
+
+            let report = `*SLC AGRÍCOLA - RELATÓRIO DE EXTINTORES A VENCER (30 DIAS)*%0A%0A`;
+            criticalItems.forEach(item => {
+                const days = getDaysToExpiry(item.expiryDate);
+                report += `• *${item.type} (${item.capacity})* - Setor: ${item.location} (Qtd: ${item.quantity}) -> *Vence em ${days} dias* (${new Date(item.expiryDate).toLocaleDateString('pt-BR', {timeZone: 'UTC'})})%0A%0A`;
+            });
+
+            contacts.forEach(c => {
+                setTimeout(() => {
+                    window.open(`https://api.whatsapp.com/send?phone=55${c.phone}&text=${report}`, '_blank');
+                }, 500);
+            });
+        }
+
+        // Função para alternar e estilizar os botões de filtro ativo
+        function setFilter(filterType) {
+            currentFilter = filterType;
+            
+            // Reseta estilo de todos os botões para "inativo"
+            const buttons = {
+                all: document.getElementById('btn-filter-all'),
+                expired: document.getElementById('btn-filter-expired'),
+                warning: document.getElementById('btn-filter-warning'),
+                regular: document.getElementById('btn-filter-regular')
+            };
+
+            buttons.all.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-xs border bg-white text-gray-700 border-gray-200 hover:bg-gray-50";
+            buttons.expired.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-xs border bg-white text-red-600 border-red-200 hover:bg-red-50";
+            buttons.warning.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-xs border bg-white text-amber-600 border-amber-200 hover:bg-amber-50";
+            buttons.regular.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-xs border bg-white text-green-700 border-green-200 hover:bg-green-50";
+
+            // Aplica cor de "ativo" no botão selecionado
+            if (filterType === 'all') buttons.all.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-xs border bg-emerald-700 text-white border-emerald-700";
+            if (filterType === 'expired') buttons.expired.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-xs border bg-red-600 text-white border-red-600";
+            if (filterType === 'warning') buttons.warning.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-xs border bg-amber-500 text-white border-amber-500";
+            if (filterType === 'regular') buttons.regular.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-xs border bg-green-700 text-white border-green-700";
+
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('inventory-table');
+            tbody.innerHTML = '';
+            
+            if (inventory.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-gray-400 font-medium">Nenhum extintor cadastrado.</td></tr>`;
+                return;
+            }
+
+            // Aplica a lógica do filtro antes de desenhar a tabela
+            const filteredInventory = inventory.filter(item => {
+                const days = getDaysToExpiry(item.expiryDate);
+                if (currentFilter === 'expired') return days <= 30; // Vencidos ou Críticos (menos de 30 dias)
+                if (currentFilter === 'warning') return days > 30 && days <= 60; // Atenção
+                if (currentFilter === 'regular') return days > 60; // Regular
+                return true; // 'all'
+            });
+
+            if (filteredInventory.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-gray-400 font-medium italic">Nenhum item encontrado para este filtro.</td></tr>`;
+                return;
+            }
+
+            filteredInventory.forEach(item => {
+                const days = getDaysToExpiry(item.expiryDate);
+                let badgeClass = "bg-green-100 text-green-800";
+                let statusText = `Regular (${days}d)`;
+                let rowAlertClass = "";
+
+                if (days < 0) {
+                    badgeClass = "bg-red-200 text-red-900 font-bold";
+                    statusText = `VENCIDO (${Math.abs(days)}d)`;
+                    rowAlertClass = "bg-red-50";
+                } else if (days <= 30) {
+                    badgeClass = "alert-critical px-2 py-1 rounded font-bold text-xs"; 
+                    statusText = `CRÍTICO (${days}d)`;
+                } else if (days <= 60) {
+                    badgeClass = "bg-yellow-100 text-yellow-800";
+                    statusText = `Atenção (${days}d)`;
+                }
+
+                const formattedDate = new Date(item.expiryDate).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
+
+                const tr = document.createElement('tr');
+                tr.className = `hover:bg-gray-50 transition ${rowAlertClass}`;
+                tr.innerHTML = `
+                    <td class="p-3 font-semibold text-gray-700">${item.type}</td>
+                    <td class="p-3 font-medium text-gray-600">${item.capacity || 'N/A'}</td>
+                    <td class="p-3 text-gray-600">${item.location}</td>
+                    <td class="p-3 font-bold text-slc-green">${item.quantity}</td>
+                    <td class="p-3 text-gray-600">${formattedDate}</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[11px] ${badgeClass}">${statusText}</span></td>
+                    <td class="p-3 flex gap-1 justify-center items-center">
+                        <button onclick="sendWhatsAppAlert('${item.type}', '${item.capacity}', '${item.location}', '${item.expiryDate}', ${days})" class="bg-emerald-500 hover:bg-emerald-600 text-white p-1.5 rounded text-[11px] transition">
+                            <i class="fa-brands fa-whatsapp"></i>
+                        </button>
+                        <button onclick="editItem(${item.id})" class="bg-blue-500 hover:bg-blue-600 text-white p-1.5 rounded text-[11px] transition" title="Editar">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <button onclick="deleteItem(${item.id})" class="bg-gray-100 hover:bg-red-100 text-gray-500 hover:text-red-700 p-1.5 rounded transition">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function exportToExcel() {
+            if (inventory.length === 0) return alert("Não há dados.");
+            const dataToExport = inventory.map(item => ({
+                'Tipo de Extintor': item.type,
+                'Capacidade': item.capacity,
+                'Localização': item.location,
+                'Quantidade': item.quantity,
+                'Vencimento': new Date(item.expiryDate).toLocaleDateString('pt-BR', {timeZone: 'UTC'}),
+                'Dias Restantes': getDaysToExpiry(item.expiryDate)
+            }));
+            const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "SLC");
+            XLSX.writeFile(workbook, `Controle_Extintores_SLC.xlsx`);
+        }
+
+        renderTable();
+        calculateTotals();
+        renderContacts();
+    </script>
+</body>
+</html>
